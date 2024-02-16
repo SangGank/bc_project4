@@ -195,5 +195,7 @@ pyrightconfig.json
 *.arrow
 *.csv
 /models
+/output
+/wandb
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python
