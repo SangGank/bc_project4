@@ -322,9 +322,9 @@ def check_no_error(
     if (
         os.path.isdir(training_args.output_dir)
         and training_args.do_train
-        and not training_args.overwrite_output_dir
+        and not training_args.overwrite_output_dir #학습결과 디렉토리가 이미 존재하고 덮었을껀지 확인
     ):
-        last_checkpoint = get_last_checkpoint(training_args.output_dir)
+        last_checkpoint = get_last_checkpoint(training_args.output_dir) #가장 최근 체크포인트 확인하고 저장
         if last_checkpoint is None and len(os.listdir(training_args.output_dir)) > 0:
             raise ValueError(
                 f"Output directory ({training_args.output_dir}) already exists and is not empty. "

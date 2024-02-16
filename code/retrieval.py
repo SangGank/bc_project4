@@ -32,7 +32,7 @@ class SparseRetrieval:
         tokenize_fn,
         data_path: Optional[str] = "../data/",
         context_path: Optional[str] = "wikipedia_documents.json",
-    ) -> NoReturn:
+    ) -> NoReturn: # 반환 값의 타입 이경우는 아무것도 안반환한다는 의미
 
         """
         Arguments:
@@ -404,6 +404,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_faiss", metavar=False, type=bool, help="")
 
     args = parser.parse_args()
+    print(args.dataset_name)
 
     # Test sparse
     org_dataset = load_from_disk(args.dataset_name)
