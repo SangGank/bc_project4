@@ -15,6 +15,10 @@ import wandb
 
 wandb.init(project="project4", entity="sanggang", name='base')
 
+
+def save_model(model, path):
+    torch.save(model.state_dict(), path)
+
 # Anwer
 class DenseRetrieval:
 
@@ -247,11 +251,11 @@ print(train_dataset)
 args = TrainingArguments(
     output_dir="dense_retireval",
     evaluation_strategy="epoch",
-    learning_rate=3e-4,
+    learning_rate=0.0003,
     per_device_train_batch_size=2,
     per_device_eval_batch_size=2,
-    num_train_epochs=2,
-    weight_decay=0.01
+    num_train_epochs=1,
+    weight_decay=0.0478
 )
 model_checkpoint = 'klue/bert-base'
 
@@ -261,8 +265,13 @@ print(args.device)
 tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
 p_encoder = BertEncoder.from_pretrained(model_checkpoint).to(args.device)
 q_encoder = BertEncoder.from_pretrained(model_checkpoint).to(args.device)
-retriever = DenseRetrieval(args=args, dataset=train_dataset, num_neg=2, tokenizer=tokenizer, p_encoder=p_encoder, q_encoder=q_encoder)
+retriever = DenseRetrieval(args=args, dataset=train_dataset, num_neg=15, tokenizer=tokenizer, p_encoder=p_encoder, q_encoder=q_encoder)
 retriever.train()
+
+
+# 훈련 완료 후 모델 저장
+retriever.p_encoder.save_pretrained('./output/p_model')
+retriever.q_encoder.save_pretrained('./output/q_model')
 
 query = '제주도 시청의 주소는 뭐야?'
 results = retriever.get_relevant_doc(query=query, k=5)

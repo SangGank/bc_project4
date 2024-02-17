@@ -19,7 +19,10 @@ from transformers import (
     TrainingArguments,
     set_seed,
 )
+import wandb
 from utils_qa import check_no_error, postprocess_qa_predictions
+
+wandb.init(project="project4", entity="sanggang", name='base')
 
 
 seed = 2024
@@ -46,6 +49,7 @@ def main():
     )
     
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    training_args.report_to=["wandb"]
     print(model_args.model_name_or_path)
 
     # [참고] argument를 manual하게 수정하고 싶은 경우에 아래와 같은 방식을 사용할 수 있습니다
@@ -331,12 +335,14 @@ def run_mrc(
     
     # Training
     if training_args.do_train:
+        print(last_checkpoint)
         if last_checkpoint is not None:
             checkpoint = last_checkpoint
         elif os.path.isdir(model_args.model_name_or_path):
             checkpoint = model_args.model_name_or_path
         else:
             checkpoint = None
+        print('checkpoint is !!!!!!!!!!',last_checkpoint, checkpoint)
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
         trainer.save_model()  # Saves the tokenizer too for easy upload
 

@@ -33,6 +33,7 @@ from transformers import (
     set_seed,
 )
 from utils_qa import check_no_error, postprocess_qa_predictions
+from code.retrieval_dense import DenseRetrieval
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +108,10 @@ def run_sparse_retrieval(
 ) -> DatasetDict:
 
     # Query에 맞는 Passage들을 Retrieval 합니다.
-    retriever = SparseRetrieval(
+    # retriever = SparseRetrieval(
+    #     tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path
+    # )
+    retriever = DenseRetrieval(
         tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path
     )
     retriever.get_sparse_embedding()

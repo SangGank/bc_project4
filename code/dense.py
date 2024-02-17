@@ -122,15 +122,15 @@ def train(args, dataset, p_model, q_model):
 args = TrainingArguments(
     output_dir="dense_retireval",
     evaluation_strategy="epoch",
-    learning_rate=2e-5,
+    learning_rate=0.0003,
     per_device_train_batch_size=2,
     per_device_eval_batch_size=2,
     num_train_epochs=2,
-    weight_decay=0.01
+    weight_decay=0.0478
 )
 
 
-model_checkpoint = "bert-base-multilingual-cased"
+model_checkpoint = 'klue/bert-base'
 
 tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
 

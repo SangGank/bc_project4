@@ -382,26 +382,27 @@ class SparseRetrieval:
 
         return D.tolist(), I.tolist()
 
-
+print(__name__)
 if __name__ == "__main__":
 
     import argparse
 
     parser = argparse.ArgumentParser(description="")
     parser.add_argument(
-        "--dataset_name", metavar="./data/train_dataset", type=str, help=""
+        "--dataset_name", metavar="./data/train_dataset", type=str, help="",default="./data/train_dataset"
     )
     parser.add_argument(
         "--model_name_or_path",
         metavar="bert-base-multilingual-cased",
+        default="bert-base-multilingual-cased",
         type=str,
         help="",
     )
-    parser.add_argument("--data_path", metavar="./data", type=str, help="")
+    parser.add_argument("--data_path", metavar="./data", type=str, help="", default= "./data")
     parser.add_argument(
         "--context_path", metavar="wikipedia_documents", type=str, help=""
     )
-    parser.add_argument("--use_faiss", metavar=False, type=bool, help="")
+    parser.add_argument("--use_faiss", metavar=False, type=bool, help="",default=True)
 
     args = parser.parse_args()
     print(args.dataset_name)
