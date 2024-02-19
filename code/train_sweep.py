@@ -18,6 +18,7 @@ from transformers import (
     HfArgumentParser,
     TrainingArguments,
     set_seed,
+    EarlyStoppingCallback,
 )
 import wandb
 from utils_qa import check_no_error, postprocess_qa_predictions
@@ -111,15 +112,22 @@ def main():
         type(tokenizer),
         type(model),
     )
-    training_args.num_train_epochs = 5
-    # training_args.learning_rate = wandb_config.lr
-    training_args.learning_rate = 1e-4
+    training_args.num_train_epochs = 7
+    training_args.learning_rate = wandb_config.lr
+    # training_args.learning_rate = 1e-4
     # training_args.weight_decay = wandb_config.decay
     training_args.weight_decay = 0.1
     training_args.evaluation_strategy = 'steps'
     training_args.eval_steps = train_step
     training_args.save_total_limit=3
     training_args.save_steps=train_step
+    training_args.logging_steps=train_step
+    training_args.logging_strategy='steps'
+    training_args.metric_for_best_model='exact_match'
+    training_args.load_best_model_at_end = True
+
+
+    # training_args.save_steps=train_step
     
     # do_train mrc model 혹은 do_eval mrc model
     if training_args.do_train or training_args.do_eval:
@@ -264,7 +272,7 @@ def run_mrc(
             stride=data_args.doc_stride,
             return_overflowing_tokens=True,
             return_offsets_mapping=True,
-            # return_token_type_ids=False, # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
+            return_token_type_ids=False, # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
             padding="max_length" if data_args.pad_to_max_length else False,
         )
 
@@ -339,21 +347,26 @@ def run_mrc(
     metric = load_metric("squad")
 
     def compute_metrics(p: EvalPrediction):
-        return metric.compute(predictions=p.predictions, references=p.label_ids)
-
+        print(metric.compute(predictions=p.predictions, references=p.label_ids).keys())
+        score = metric.compute(predictions=p.predictions, references=p.label_ids)
+        
+        columns=['eval_exact_match', 'eval_f1']
+        score ={column : value for column,value in zip(columns, score.values())}
+        print(score)
+        return score
+    
     # Trainer 초기화
     trainer = QuestionAnsweringTrainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
-        eval_dataset=eval_dataset if training_args.do_eval else None,
-        # eval_dataset=eval_dataset,
-        # eval_examples=datasets["validation"],
+        eval_dataset=eval_dataset if training_args.do_eval else None,   
         eval_examples=datasets["validation"] if training_args.do_eval else None,
         tokenizer=tokenizer,
         data_collator=data_collator,
         post_process_function=post_processing_function,
         compute_metrics=compute_metrics,
+        callbacks = [EarlyStoppingCallback(early_stopping_patience=5)],
     )
     
     
@@ -404,17 +417,10 @@ def run_mrc(
 if __name__ == "__main__":
     sweep_config = {
     "method": "bayes",
-    "name": "sweep_train",
-    "metric": {"goal": "maximum", "name": "train/exact_match"},
+    "name": "sweep_train_lr_roberta_7epochs",
+    "metric": {"goal": "maximize", "name": "eval/exact_match"},
     "parameters": {
-        # 'epoch' :{"values": [3,4,5]},
-        # "lr": {"max": 1e-3, "min": 1e-5},
-        "lr_schedule" : {"values": ["linear","cosine","cosine_with_restarts", "polynomial",
-                                    "constant","constant_with_warmup", "inverse_sqrt","reduce_lr_on_plateau"]},
-        # "decay": {"max": 0.1, "min": 0.0001},
-        # 'model_name':{"values": ['klue/bert-base',"snunlp/KR-ELECTRA-generator","bert-base-multilingual-cased",'monologg/koelectra-base-v3-generator']},
-        # 'model_name':{"values": ['klue/bert-base',"bert-base-multilingual-cased",'monologg/koelectra-base-v3-generator']},
-
+        "lr": {"max": 1e-3, "min": 1e-6},
         },
     }
     sweep_id = wandb.sweep(sweep=sweep_config, project="project4")

@@ -282,3 +282,16 @@ indices = results.tolist()
 for i, idx in enumerate(indices):
     print(f"Top-{i + 1}th Passage (Index {idx})")
     print(retriever.dataset['context'][idx])
+
+
+
+# # test single query
+# with timer("single query by faiss"):
+#     scores, indices = retriever.retrieve_faiss(query)
+
+# # test bulk
+# with timer("bulk query by exhaustive search"):
+#     df = retriever.retrieve_faiss(full_ds)
+#     df["correct"] = df["original_context"] == df["context"]
+
+#     print("correct retrieval result by faiss", df["correct"].sum() / len(df))

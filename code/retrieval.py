@@ -58,10 +58,15 @@ class SparseRetrieval:
         self.data_path = data_path
         with open(os.path.join(data_path, context_path), "r", encoding="utf-8") as f:
             wiki = json.load(f)
-
+        
         self.contexts = list(
             dict.fromkeys([v["text"] for v in wiki.values()])
         )  # set 은 매번 순서가 바뀌므로
+        
+        # texts = ' '.join([v["text"] for v in wiki.values()])
+        # texts = texts.split('\n\n')
+        # self.contexts = [v for v in texts if v]
+
         print(f"Lengths of unique contexts : {len(self.contexts)}")
         self.ids = list(range(len(self.contexts)))
 
@@ -73,7 +78,8 @@ class SparseRetrieval:
         self.p_embedding = None  # get_sparse_embedding()로 생성합니다
         self.indexer = None  # build_faiss()로 생성합니다.
 
-    def get_sparse_embedding(self) -> NoReturn:
+    # def get_sparse_embedding(self) -> NoReturn:
+    def get_sparse_embedding(self):
 
         """
         Summary:
@@ -104,7 +110,8 @@ class SparseRetrieval:
                 pickle.dump(self.tfidfv, file)
             print("Embedding pickle saved.")
 
-    def build_faiss(self, num_clusters=64) -> NoReturn:
+    # def build_faiss(self, num_clusters=64) -> NoReturn:
+    def build_faiss(self, num_clusters=64):
 
         """
         Summary:
@@ -193,7 +200,7 @@ class SparseRetrieval:
                     "question": example["question"],
                     "id": example["id"],
                     # Retrieve한 Passage의 id, context를 반환합니다.
-                    "context": " ".join(
+                    "context": "\n".join(
                         [self.contexts[pid] for pid in doc_indices[idx]]
                     ),
                 }
@@ -321,7 +328,7 @@ class SparseRetrieval:
                     "question": example["question"],
                     "id": example["id"],
                     # Retrieve한 Passage의 id, context를 반환합니다.
-                    "context": " ".join(
+                    "context": "\n".join(
                         [self.contexts[pid] for pid in doc_indices[idx]]
                     ),
                 }
@@ -381,6 +388,8 @@ class SparseRetrieval:
         D, I = self.indexer.search(q_embs, k)
 
         return D.tolist(), I.tolist()
+    
+
 
 print(__name__)
 if __name__ == "__main__":

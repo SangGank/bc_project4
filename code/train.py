@@ -5,6 +5,7 @@ import random
 import numpy as np
 import torch
 from typing import NoReturn
+import evaluate
 
 from arguments import DataTrainingArguments, ModelArguments
 from datasets import DatasetDict, load_from_disk, load_metric
@@ -17,6 +18,7 @@ from transformers import (
     EvalPrediction,
     HfArgumentParser,
     TrainingArguments,
+    EarlyStoppingCallback,
     set_seed,
 )
 import wandb
@@ -50,7 +52,10 @@ def main():
     
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
     training_args.report_to=["wandb"]
-    print(model_args.model_name_or_path)
+    training_args.do_eval= True
+    model_args.model_name_or_path = "klue/roberta-large"
+
+
 
     # [참고] argument를 manual하게 수정하고 싶은 경우에 아래와 같은 방식을 사용할 수 있습니다
     # training_args.per_device_train_batch_size = 4
@@ -103,6 +108,19 @@ def main():
         type(tokenizer),
         type(model),
     )
+    # trianer argumnet 변수들
+    train_step = 300
+    training_args.num_train_epochs = 7
+    training_args.learning_rate = 1e-4
+    training_args.weight_decay = 0.1
+    training_args.evaluation_strategy = 'steps'
+    training_args.eval_steps = train_step
+    training_args.save_total_limit=3
+    training_args.save_steps=train_step
+    training_args.logging_steps=train_step
+    training_args.logging_strategy='steps'
+    training_args.metric_for_best_model='exact_match'
+    training_args.load_best_model_at_end = True
 
     # do_train mrc model 혹은 do_eval mrc model
     if training_args.do_train or training_args.do_eval:
@@ -151,7 +169,7 @@ def run_mrc(
             stride=data_args.doc_stride,
             return_overflowing_tokens=True,
             return_offsets_mapping=True,
-            # return_token_type_ids=False, # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
+            return_token_type_ids=False, # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
             padding="max_length" if data_args.pad_to_max_length else False,
         )
         # 길이가 긴 context가 등장할 경우 truncate를 진행해야하므로, 해당 데이터셋을 찾을 수 있도록 mapping 가능한 값이 필요합니다.
@@ -242,7 +260,7 @@ def run_mrc(
             stride=data_args.doc_stride,
             return_overflowing_tokens=True,
             return_offsets_mapping=True,
-            # return_token_type_ids=False, # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
+            return_token_type_ids=False, # roberta모델을 사용할 경우 False, bert를 사용할 경우 True로 표기해야합니다.
             padding="max_length" if data_args.pad_to_max_length else False,
         )
 
@@ -315,9 +333,14 @@ def run_mrc(
             )
 
     metric = load_metric("squad")
+    # metric = evaluate.load('squad')
 
     def compute_metrics(p: EvalPrediction):
-        return metric.compute(predictions=p.predictions, references=p.label_ids)
+        # print(metric.compute(predictions=p.predictions, references=p.label_ids).keys())
+        score = metric.compute(predictions=p.predictions, references=p.label_ids)
+        
+        score ={'eval_'+column : value for column,value in score.items()}
+        return score
 
     # Trainer 초기화
     trainer = QuestionAnsweringTrainer(
@@ -330,19 +353,20 @@ def run_mrc(
         data_collator=data_collator,
         post_process_function=post_processing_function,
         compute_metrics=compute_metrics,
+        callbacks = [EarlyStoppingCallback(early_stopping_patience=5)]
     )
     
     
     # Training
     if training_args.do_train:
-        print(last_checkpoint)
-        if last_checkpoint is not None:
-            checkpoint = last_checkpoint
-        elif os.path.isdir(model_args.model_name_or_path):
-            checkpoint = model_args.model_name_or_path
-        else:
-            checkpoint = None
-        print('checkpoint is !!!!!!!!!!',last_checkpoint, checkpoint)
+        # print(last_checkpoint)
+        # if last_checkpoint is not None:
+        #     checkpoint = last_checkpoint
+        # elif os.path.isdir(model_args.model_name_or_path):
+        #     checkpoint = model_args.model_name_or_path
+        # else:
+        #     checkpoint = None
+        checkpoint = None
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
         trainer.save_model()  # Saves the tokenizer too for easy upload
 
