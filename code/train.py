@@ -111,7 +111,7 @@ def main():
     # trianer argumnet 변수들
     train_step = 300
     training_args.num_train_epochs = 7
-    training_args.learning_rate = 1e-4
+    training_args.learning_rate = 0.88e-5
     training_args.weight_decay = 0.1
     training_args.evaluation_strategy = 'steps'
     training_args.eval_steps = train_step
@@ -121,6 +121,9 @@ def main():
     training_args.logging_strategy='steps'
     training_args.metric_for_best_model='exact_match'
     training_args.load_best_model_at_end = True
+    training_args.greater_is_better= True
+    print('argument ')
+    print(training_args)
 
     # do_train mrc model 혹은 do_eval mrc model
     if training_args.do_train or training_args.do_eval:

@@ -125,6 +125,9 @@ def main():
     training_args.logging_strategy='steps'
     training_args.metric_for_best_model='exact_match'
     training_args.load_best_model_at_end = True
+    training_args.greater_is_better= True
+    training_args.lr_scheduler_type = wandb_config.scheduler
+
 
 
     # training_args.save_steps=train_step
@@ -347,12 +350,9 @@ def run_mrc(
     metric = load_metric("squad")
 
     def compute_metrics(p: EvalPrediction):
-        print(metric.compute(predictions=p.predictions, references=p.label_ids).keys())
         score = metric.compute(predictions=p.predictions, references=p.label_ids)
         
-        columns=['eval_exact_match', 'eval_f1']
-        score ={column : value for column,value in zip(columns, score.values())}
-        print(score)
+        score ={'eval_'+column : value for column,value in score.items()}
         return score
     
     # Trainer 초기화
@@ -416,13 +416,15 @@ def run_mrc(
 
 if __name__ == "__main__":
     sweep_config = {
-    "method": "bayes",
+    "method": "random",
     "name": "sweep_train_lr_roberta_7epochs",
     "metric": {"goal": "maximize", "name": "eval/exact_match"},
     "parameters": {
-        "lr": {"max": 1e-3, "min": 1e-6},
+        "lr": {"max": 1e-4, "min": 1e-7},
+        "scheduler": {"values": ['linear','cosine','constant','polynomial']},
         },
     }
     sweep_id = wandb.sweep(sweep=sweep_config, project="project4")
     wandb.agent(sweep_id, function=main, count=20)
     # main()
+
