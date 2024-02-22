@@ -202,4 +202,7 @@ pyrightconfig.json
 *.pkl
 /outputs
 /output
+/models
+/model_sweep
+/sweeps
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python

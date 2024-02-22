@@ -49,12 +49,31 @@ def main():
     # 가능한 arguments 들은 ./arguments.py 나 transformer package 안의 src/transformers/training_args.py 에서 확인 가능합니다.
     # --help flag 를 실행시켜서 확인할 수 도 있습니다.
 
+    
+    seed = wandb_config.seed
+    deterministic = False
+    train_step = 300
+
+    random.seed(seed) # python random seed 고정
+    np.random.seed(seed) # numpy random seed 고정
+    torch.manual_seed(seed) # torch random seed 고정
+    torch.cuda.manual_seed_all(seed)
+    if deterministic: # cudnn random seed 고정 - 고정 시 학습 속도가 느려질 수 있습니다. 
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+
+
+
+
     parser = HfArgumentParser(
         (ModelArguments, DataTrainingArguments, TrainingArguments)
     )
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
     training_args.report_to=["wandb"]
     training_args.do_eval= True
+    
+    training_args.seed = seed = wandb_config.seed
 
     model_args.model_name_or_path = "klue/roberta-large"
     # model_args.model_name_or_path = 'klue/bert-base'
@@ -113,7 +132,8 @@ def main():
         type(model),
     )
     training_args.num_train_epochs = 7
-    training_args.learning_rate = wandb_config.lr
+    # training_args.learning_rate = wandb_config.lr
+    training_args.learning_rate = 0.85e-5
     # training_args.learning_rate = 1e-4
     # training_args.weight_decay = wandb_config.decay
     training_args.weight_decay = 0.1
@@ -126,7 +146,8 @@ def main():
     training_args.metric_for_best_model='exact_match'
     training_args.load_best_model_at_end = True
     training_args.greater_is_better= True
-    training_args.lr_scheduler_type = wandb_config.scheduler
+    # training_args.lr_scheduler_type = wandb_config.scheduler
+    training_args.lr_scheduler_type = 'linear'
 
 
 
@@ -420,11 +441,12 @@ if __name__ == "__main__":
     "name": "sweep_train_lr_roberta_7epochs",
     "metric": {"goal": "maximize", "name": "eval/exact_match"},
     "parameters": {
-        "lr": {"max": 1e-4, "min": 1e-7},
-        "scheduler": {"values": ['linear','cosine','constant','polynomial']},
+        # "lr": {"max": 1.5e-5, "min": 1e-7},
+        "seed": {"max": 2000, "min": 1},
+        # "scheduler": {"values": ['linear','cosine','constant','polynomial']},
         },
     }
     sweep_id = wandb.sweep(sweep=sweep_config, project="project4")
-    wandb.agent(sweep_id, function=main, count=20)
+    wandb.agent(sweep_id, function=main, count=10)
     # main()
 

@@ -425,11 +425,11 @@ class Retrieval:
         with open(os.path.join(data_path, context_path), "r", encoding="utf-8") as f:
             wiki = json.load(f)
 
-        # self.contexts = list(dict.fromkeys([v["text"] for v in wiki.values()]))  # set 은 매번 순서가 바뀌므로
+        self.contexts = list(dict.fromkeys([v["text"] for v in wiki.values()]))  # set 은 매번 순서가 바뀌므로
         
-        texts = '\n\n'.join([v["text"] for v in wiki.values()])
-        texts = texts.split('\n\n')
-        self.contexts = [v for v in texts if v]
+        # texts = ' \n\n '.join([v["text"] for v in wiki.values()])
+        # texts = texts.split('\n\n')
+        # self.contexts = [v.strip() for v in texts if v]
 
         print(f"Lengths of unique contexts : {len(self.contexts)}")
         
@@ -493,7 +493,7 @@ class Retrieval:
                     "question": example["question"],
                     "id": example["id"],
                     # Retrieve한 Passage의 id, context를 반환합니다.
-                    # "context": "\n\n".join([self.contexts[pid] for pid in doc_indices[idx]]),
+                    # "context": " \n\n ".join([self.contexts[pid] for pid in doc_indices[idx]]),
                     "context": " ".join([self.contexts[pid] for pid in doc_indices[idx]]),
                 }
                 if "context" in example.keys() and "answers" in example.keys():
@@ -542,7 +542,6 @@ class BM25(Retrieval):
     def get_sparse_embedding(self):
         with timer("bm25 building"):
             self.bm25 = BM25Okapi(self.contexts, tokenizer = self.tokenize_fn) # self.contexts는 [str, str, ...] 이런식으로 날라온다
-                                                                              # 그걸 하나씩 tokenizing 해서 넣어준다.
 
     def get_relevant_doc(self, query: str, k: Optional[int] = 1) -> Tuple[List, List]:
         with timer("transform"):

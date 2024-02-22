@@ -8,7 +8,6 @@ Open-Domain Question Answering 을 수행하는 inference 코드 입니다.
 import logging
 import sys
 from typing import Callable, Dict, List, NoReturn, Tuple
-from retrieval_bm25 import RetrievalBM25
 
 import numpy as np
 from arguments import DataTrainingArguments, ModelArguments
@@ -46,6 +45,7 @@ def main():
         (ModelArguments, DataTrainingArguments, TrainingArguments)
     )
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    
 
     training_args.do_train = True
 
@@ -86,17 +86,22 @@ def main():
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
         config=config,
     )
+    output_dir =training_args.output_dir[:-1]
 
+    for i in range(10,60,5):
+    # for i in [13,17]:
+        training_args.output_dir = output_dir+'_base_'+str(i)
+        data_args.top_k_retrieval = i
     # True일 경우 : run passage retrieval
-    if data_args.eval_retrieval:
-        datasets = run_sparse_retrieval(
-            tokenizer.tokenize, datasets, training_args, data_args,
-        )
-    print(datasets)
-
-    # eval or predict mrc model
-    if training_args.do_eval or training_args.do_predict:
-        run_mrc(data_args, training_args, model_args, datasets, tokenizer, model)
+        if data_args.eval_retrieval:
+            datasets = run_sparse_retrieval(
+                tokenizer.tokenize, datasets, training_args, data_args,
+            )
+        print(datasets)
+    
+        # eval or predict mrc model
+        if training_args.do_eval or training_args.do_predict:
+            run_mrc(data_args, training_args, model_args, datasets, tokenizer, model)
 
 
 
@@ -113,23 +118,19 @@ def run_sparse_retrieval(
     # retriever = SparseRetrieval(
     #     tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path
     # )
-    # retriever = BM25(
-    #         tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path
-    #     )
-    retriever = RetrievalBM25(
+    retriever = BM25(
             tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path
         )
-    df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval)
-    # retriever.get_sparse_embedding()
+    retriever.get_sparse_embedding()
     # print('이거 진짜 실행 안돼???~!??')
 
-    # if data_args.use_faiss:
-    #     retriever.build_faiss(num_clusters=data_args.num_clusters)
-    #     df = retriever.retrieve_faiss(
-    #         datasets["validation"], topk=data_args.top_k_retrieval
-    #     )
-    # else:
-    #     df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval)
+    if data_args.use_faiss:
+        retriever.build_faiss(num_clusters=data_args.num_clusters)
+        df = retriever.retrieve_faiss(
+            datasets["validation"], topk=data_args.top_k_retrieval
+        )
+    else:
+        df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval)
     # test data 에 대해선 정답이 없으므로 id question context 로만 데이터셋이 구성됩니다.
     if training_args.do_predict:
         f = Features(
@@ -155,10 +156,10 @@ def run_sparse_retrieval(
                 "context": Value(dtype="string", id=None),
                 "id": Value(dtype="string", id=None),
                 "question": Value(dtype="string", id=None),
-                "original_context": Value(dtype="string", id=None),
+                "original_context": Value("string"),
             }
         )
-    print(df.columns)
+    # print(f)
     datasets = DatasetDict({"validation": Dataset.from_pandas(df, features=f)})
     return datasets
 
